@@ -37,7 +37,7 @@
 
   <!-- Robot re-spawners -->
   <include file="$(find robotics_project)/launch/launch_robot.launch">
-    <arg name="level"     value="$(arg student_level)"/>
+    <arg name="level"     value="E"/>
   </include>
 
   <node pkg="rosservice" type="rosservice" name="set_cube_pose" output="screen" args="call /gazebo/set_model_state '{model_state: { model_name: aruco_cube, pose: { position: { x: -1.130530, y: -6.653650, z: 0.86250 }, orientation: {x: 0, y: 0, z: 0, w: 1 } }, twist: { linear: {x: 0 , y: 0, z: 0 } , angular: { x: 0, y: 0, z: 0 } } , reference_frame: map } }'" />
