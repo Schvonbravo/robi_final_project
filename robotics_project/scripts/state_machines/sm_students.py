@@ -5,8 +5,9 @@ from numpy import linalg as LA
 
 import rospy
 from geometry_msgs.msg import Twist
+#SetBool for pick & place task
 from std_srvs.srv import Empty, SetBool, SetBoolRequest  
-from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped  #
 from robotics_project.srv import MoveHead, MoveHeadRequest, MoveHeadResponse
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
 from sensor_msgs.msg import JointState
@@ -29,17 +30,22 @@ class StateMachine(object):
 
         # Access rosparams
         self.cmd_vel_top = rospy.get_param(rospy.get_name() + '/cmd_vel_topic')
+        self.aruco_pose_top = rospy.get_param(rospy.get_name() + '/aruco_pose_topic') #
+        # Following the same way as the move_head service, assign xx_nm 
         self.mv_head_srv_nm = rospy.get_param(rospy.get_name() + '/move_head_srv')
+        self.pick_srv_nm = rospy.get_param(rospy.get_name() + '/pick_srv')            #
+        self.place_srv_nm = rospy.get_param(rospy.get_name() + '/place_srv')          #
 
-        self.pickup_cube_srv = rospy.get_param(rospy.get_name() + '/pick_srv')
-        self.place_cube_srv = rospy.get_param(rospy.get_name() + '/place_srv')
         # Subscribe to topics
 
         # Wait for service providers
         rospy.wait_for_service(self.mv_head_srv_nm, timeout=30)
+        rospy.wait_for_service(self.pick_srv_nm, timeout=30)
+        rospy.wait_for_service(self.palce_srv_nm, timeout=30)
 
         # Instantiate publishers
         self.cmd_vel_pub = rospy.Publisher(self.cmd_vel_top, Twist, queue_size=10)
+        self.aruco_pose_pub = rospy.Publisher(self.aruco_pose_top, PoseStamped, queue_size=10)    #
 
         # Set up action clients
         rospy.loginfo("%s: Waiting for play_motion action server...", self.node_name)
@@ -56,7 +62,8 @@ class StateMachine(object):
 
 
     def check_states(self):
-
+                                  
+        #self.state != ?: ? present the final success state here, take care
         while not rospy.is_shutdown() and self.state != 4:
 
             # State 0:  Tuck arm 
@@ -74,31 +81,32 @@ class StateMachine(object):
                 else:
                     self.play_motion_ac.cancel_goal()
                     rospy.logerr("%s: play_motion failed to tuck arm, reset simulation", self.node_name)
-                    self.state = 5
+                    self.state = 10
 
                 rospy.sleep(1)
 
 
-            # State 1:  Pickup cube
+            # State 1:  Complete picking task
             if self.state == 1:
+                self.aruco_pose_pub.publish(           )
                 try:    
-                    rospy.loginfo("%s: Picking up the cube...", self.node_name)
-                    pickup_cube_srv = rospy.ServiceProxy(self.pickup_cube_srv, SetBool)
-                    pickup_cube_req = pickup_cube_srv()
+                    rospy.loginfo("%s: Executing picking task...", self.node_name)
+                    pick_srv = rospy.ServiceProxy(self.pick_srv_nm, SetBool)  #?Why here use SetBool, how to use it 
+                    pick_req = pick_srv()
 
-                    if pickup_cube_req.success == True:
+                    if pick_req.success == True:
                         self.state = 2
-                        rospy.loginfo("%s: Pick up cube succeded!", self.node_name)      
+                        rospy.loginfo("%s: Cube picked", self.node_name)      
                     else:
-                        self.state = 6
-                        rospy.loginfo("%s: Pick up cube failed!", self.node_name) 
+                        self.state = 10
+                        rospy.loginfo("%s: Failed to pick the cube, reset simulation", self.node_name) 
                 
                     rospy.sleep(3)
             
                  except rospy.ServiceException, e:
-                    print "Service call to move_head server failed: %s"%e
+                    print "Service call to pick server failed: %s"%e
 
-            # State 2. Turn around
+            # State 2. Execute turn around task
             if self.state == 2:
                 move_msg = Twist()
                 move_msg.angular.z = -1
@@ -106,7 +114,7 @@ class StateMachine(object):
                 rate = rospy.Rate(10)
                 converged = False
                 cnt = 0
-                rospy.loginfo("%s: Turning around...", self.node_name)
+                rospy.loginfo("%s: Executing turn around task...", self.node_name)
                 while not rospy.is_shutdown() and cnt < 15:
                     self.cmd_vel_pub.publish(move_msg)
                     rate.sleep()
@@ -115,7 +123,7 @@ class StateMachine(object):
                 self.state = 3
                 rospy.sleep(1)
 
-            #State 3. Move to the other table
+            #State 3. Carry cube to 2nd table
             if self.state == 3
                 move_msg = Twist()
                 move_msg.linear.x = 1
@@ -124,7 +132,7 @@ class StateMachine(object):
                 rate = rospy.Rate(10)
                 converged = False
                 cnt = 0
-                rospy.loginfo("%s: Moving to the other table...", self.node_name)
+                rospy.loginfo("%s: Carrying cube to 2nd table...", self.node_name)
                 while not rospy.is_shutdown() and cnt < 15:
                     self.cmd_vel_pub.publish(move_msg)
                     rate.sleep()
@@ -133,28 +141,29 @@ class StateMachine(object):
                 self.state = 4
                 rospy.sleep(1)
 
-            #State 4. Place cube
+            #State 4. Complete placing task
             if self.state == 4
+                self.aruco_pose_pub.publish(            )
             	try:
-                    rospy.loginfo("%s: Placing the cube...", self.node_name)
-                    place_cube_srv = rospy.ServiceProxy(self.self.place_cube_srv, MoveHead)
-                    place_cube_req = place_cube_srv()
+                    rospy.loginfo("%s: Executing placing task...", self.node_name)
+                    place_srv = rospy.ServiceProxy(self.self.place_srv_nm, SetBool)
+                    place_req = place_srv()
                     
                     if place_cube_req.success == True:
                         self.state = 5
-                        rospy.loginfo("%s: Place cube succeded!", self.node_name)
+                        rospy.loginfo("%s: Cube palced", self.node_name)
                     else:
-                        rospy.loginfo("%s: Place cube failed!", self.node_name)
-                        self.state = 6
+                        rospy.loginfo("%s: Failed to place the cube, reset simulation!", self.node_name)
+                        self.state = 10
 
                     rospy.sleep(3)
                 
                 except rospy.ServiceException, e:
-                    print "Service call to move_head server failed: %s"%e
+                    print "Service call to place server failed: %s"%e
             
 
             # Error handling
-            if self.state == 6:
+            if self.state == 10:
                 rospy.logerr("%s: State machine failed. Check your code and try again!", self.node_name)
                 return
 
