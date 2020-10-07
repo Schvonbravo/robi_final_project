@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
 import numpy as np
-from numpy import linalg as LA
+from numpy import linalg as LA, math
 
 import rospy
-from geometry_msgs.msg import Twist
-#SetBool for pick & place task
-from std_srvs.srv import Empty, SetBool, SetBoolRequest  
-from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped  #
+from geometry_msgs.msg import Twist, Pose
+from robotics_project.msg import PickUpPoseAction
+from std_msgs.msg import Header
+from std_srvs.srv import Empty, SetBool, SetBoolRequest
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Point, Quaternion
 from robotics_project.srv import MoveHead, MoveHeadRequest, MoveHeadResponse
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
 from sensor_msgs.msg import JointState
@@ -17,56 +18,60 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from nav_msgs.msg import Odometry
 
 from moveit_msgs.msg import MoveItErrorCodes
+
 moveit_error_dict = {}
 for name in MoveItErrorCodes.__dict__.keys():
     if not name[:1] == '_':
         code = MoveItErrorCodes.__dict__[name]
         moveit_error_dict[code] = name
 
+
 class StateMachine(object):
+    def aruco_pose_cb(self, aruco_pose_msg):
+        self.aruco_pose = aruco_pose_msg
+        self.aruco_pose_rcv = True
+    def gripper_cb(self, joint_state_msg):
+        self.left_gripper = joint_state_msg.position[7]
+        self.right_gripper = joint_state_msg.position[8]
     def __init__(self):
-        
+
         self.node_name = "Student SM"
 
         # Access rosparams
         self.cmd_vel_top = rospy.get_param(rospy.get_name() + '/cmd_vel_topic')
-        self.aruco_pose_top = rospy.get_param(rospy.get_name() + '/aruco_pose_topic') #
-        # Following the same way as the move_head service, assign xx_nm 
         self.mv_head_srv_nm = rospy.get_param(rospy.get_name() + '/move_head_srv')
-        self.pick_srv_nm = rospy.get_param(rospy.get_name() + '/pick_srv')            #
-        self.place_srv_nm = rospy.get_param(rospy.get_name() + '/place_srv')          #
+        self.pick_cube_srv_nm = rospy.get_param(rospy.get_name() + '/pick_srv')
+        self.place_cube_srv_nm = rospy.get_param(rospy.get_name() + '/place_srv')
+        self.dtct_top = rospy.get_param(rospy.get_name() + '/aruco_pose_topic')
 
-        # Subscribe to topics
+        # Subscribe to topicspick_srv
 
         # Wait for service providers
         rospy.wait_for_service(self.mv_head_srv_nm, timeout=30)
-        rospy.wait_for_service(self.pick_srv_nm, timeout=30)
-        rospy.wait_for_service(self.palce_srv_nm, timeout=30)
+        rospy.wait_for_service(self.pick_cube_srv_nm, timeout=30)
+        rospy.wait_for_service(self.place_cube_srv_nm, timeout=30)
 
         # Instantiate publishers
         self.cmd_vel_pub = rospy.Publisher(self.cmd_vel_top, Twist, queue_size=10)
-        self.aruco_pose_pub = rospy.Publisher(self.aruco_pose_top, PoseStamped, queue_size=10)    #
 
         # Set up action clients
         rospy.loginfo("%s: Waiting for play_motion action server...", self.node_name)
         self.play_motion_ac = SimpleActionClient("/play_motion", PlayMotionAction)
+        # self.pi
+        # Could be called /robotics_intro/pick_srv
         if not self.play_motion_ac.wait_for_server(rospy.Duration(1000)):
             rospy.logerr("%s: Could not connect to /play_motion action server", self.node_name)
             exit()
         rospy.loginfo("%s: Connected to play_motion action server", self.node_name)
-
+        self.pick_cube_pub = rospy.Subscriber(self.dtct_top, PoseStamped, self.aruco_pose_cb)
         # Init state machine
         self.state = 0
         rospy.sleep(3)
         self.check_states()
 
-
     def check_states(self):
-                                  
-        #self.state != ?: ? present the final success state here, take care
-        while not rospy.is_shutdown() and self.state != 4:
 
-            # State 0:  Tuck arm 
+        while not rospy.is_shutdown() and self.state != 6:
             if self.state == 0:
                 rospy.loginfo("%s: Tucking the arm...", self.node_name)
                 goal = PlayMotionGoal()
@@ -81,32 +86,28 @@ class StateMachine(object):
                 else:
                     self.play_motion_ac.cancel_goal()
                     rospy.logerr("%s: play_motion failed to tuck arm, reset simulation", self.node_name)
-                    self.state = 10
+                    self.state = 5
 
                 rospy.sleep(1)
-
-
-            # State 1:  Complete picking task
             if self.state == 1:
-                self.aruco_pose_pub.publish(           )
-                try:    
-                    rospy.loginfo("%s: Executing picking task...", self.node_name)
-                    pick_srv = rospy.ServiceProxy(self.pick_srv_nm, SetBool)  #?Why here use SetBool, how to use it 
-                    pick_req = pick_srv()
+                #self.pick_cube_pub.publish(self.cube_pose_stamped)
+                try:
+                    rospy.loginfo("%s: Picking up cube...", self.node_name)
+                    pick_cube_srv = rospy.ServiceProxy(self.pick_cube_srv_nm, SetBool)
+                    pick_cube_req = pick_cube_srv(True)
 
-                    if pick_req.success == True:
+                    if pick_cube_req.success:
                         self.state = 2
-                        rospy.loginfo("%s: Cube picked", self.node_name)      
+                        rospy.loginfo("%s: Pick Cube succeded!", self.node_name)
                     else:
-                        self.state = 10
-                        rospy.loginfo("%s: Failed to pick the cube, reset simulation", self.node_name) 
-                
-                    rospy.sleep(3)
-            
-                 except rospy.ServiceException, e:
-                    print "Service call to pick server failed: %s"%e
+                        rospy.loginfo("%s: Pick Cube failed!", self.node_name)
+                        self.state = 5
 
-            # State 2. Execute turn around task
+                    rospy.sleep(3)
+
+                except rospy.ServiceException, e:
+                    print "Service call to move_head server failed: %s" % e
+            # Turn around
             if self.state == 2:
                 move_msg = Twist()
                 move_msg.angular.z = -1
@@ -114,8 +115,8 @@ class StateMachine(object):
                 rate = rospy.Rate(10)
                 converged = False
                 cnt = 0
-                rospy.loginfo("%s: Executing turn around task...", self.node_name)
-                while not rospy.is_shutdown() and cnt < 15:
+                rospy.loginfo("%s: Turning around", self.node_name)
+                while not rospy.is_shutdown() and cnt < 31:
                     self.cmd_vel_pub.publish(move_msg)
                     rate.sleep()
                     cnt = cnt + 1
@@ -123,8 +124,8 @@ class StateMachine(object):
                 self.state = 3
                 rospy.sleep(1)
 
-            #State 3. Carry cube to 2nd table
-            if self.state == 3
+            # Move towards the table
+            if self.state == 3:
                 move_msg = Twist()
                 move_msg.linear.x = 1
                 move_msg.angular.z = 0
@@ -132,88 +133,39 @@ class StateMachine(object):
                 rate = rospy.Rate(10)
                 converged = False
                 cnt = 0
-                rospy.loginfo("%s: Carrying cube to 2nd table...", self.node_name)
-                while not rospy.is_shutdown() and cnt < 15:
+                rospy.loginfo("%s: Moving towards table", self.node_name)
+                while not rospy.is_shutdown() and cnt < 10:
                     self.cmd_vel_pub.publish(move_msg)
                     rate.sleep()
                     cnt = cnt + 1
 
                 self.state = 4
                 rospy.sleep(1)
+            ##########
+            if self.state == 4:
+                #self.pick_cube_pub.publish(self.cube_pose_stamped)
+                try:
+                    rospy.loginfo("%s: Placing down cube...", self.node_name)
+                    place_cube_srv = rospy.ServiceProxy(self.place_cube_srv_nm, SetBool)
+                    place_cube_req = place_cube_srv(True)
 
-            #State 4. Complete placing task
-            if self.state == 4
-                self.aruco_pose_pub.publish(            )
-            	try:
-                    rospy.loginfo("%s: Executing placing task...", self.node_name)
-                    place_srv = rospy.ServiceProxy(self.self.place_srv_nm, SetBool)
-                    place_req = place_srv()
-                    
-                    if place_cube_req.success == True:
-                        self.state = 5
-                        rospy.loginfo("%s: Cube palced", self.node_name)
+                    if place_cube_req.success:
+                        self.state = 6
+                        rospy.loginfo("%s: Place Cube succeded!", self.node_name)
                     else:
-                        rospy.loginfo("%s: Failed to place the cube, reset simulation!", self.node_name)
-                        self.state = 10
+                        rospy.loginfo("%s: Place Cube failed!", self.node_name)
+                        self.state = 5
 
                     rospy.sleep(3)
-                
+
                 except rospy.ServiceException, e:
-                    print "Service call to place server failed: %s"%e
-            
-
-            # Error handling
-            if self.state == 10:
-                rospy.logerr("%s: State machine failed. Check your code and try again!", self.node_name)
-                return
-
-        rospy.loginfo("%s: State machine finished!", self.node_name)
-        return
-
-
-            # # State 0: Move the robot "manually" to door
-            # if self.state == 0:
-            #     move_msg = Twist()
-            #     move_msg.linear.x = 1
-
-            #     rate = rospy.Rate(10)
-            #     converged = False
-            #     cnt = 0
-            #     rospy.loginfo("%s: Moving towards door", self.node_name)
-            #     while not rospy.is_shutdown() and cnt < 25:
-            #         self.cmd_vel_pub.publish(move_msg)
-            #         rate.sleep()
-            #         cnt = cnt + 1
-
-            #     self.state = 1
-            #     rospy.sleep(1)
-
-            # # State 1:  Lower robot head service
-            # if self.state == 1:
-            # 	try:
-            #         rospy.loginfo("%s: Lowering robot head", self.node_name)
-            #         move_head_srv = rospy.ServiceProxy(self.mv_head_srv_nm, MoveHead)
-            #         move_head_req = move_head_srv("down")
-                    
-            #         if move_head_req.success == True:
-            #             self.state = 2
-            #             rospy.loginfo("%s: Move head down succeded!", self.node_name)
-            #         else:
-            #             rospy.loginfo("%s: Move head down failed!", self.node_name)
-            #             self.state = 5
-
-            #         rospy.sleep(3)
-                
-            #     except rospy.ServiceException, e:
-            #         print "Service call to move_head server failed: %s"%e
-
-
-
+                    print "Service call to move_head server failed: %s" % e
+            #########3
             # # State 2:  Move the robot "manually" to chair
             # if self.state == 2:
             #     move_msg = Twist()
             #     move_msg.angular.z = -1
-
+            #
             #     rate = rospy.Rate(10)
             #     converged = False
             #     cnt = 0
@@ -222,7 +174,7 @@ class StateMachine(object):
             #         self.cmd_vel_pub.publish(move_msg)
             #         rate.sleep()
             #         cnt = cnt + 1
-
+            #
             #     move_msg.linear.x = 1
             #     move_msg.angular.z = 0
             #     cnt = 0
@@ -230,9 +182,33 @@ class StateMachine(object):
             #         self.cmd_vel_pub.publish(move_msg)
             #         rate.sleep()
             #         cnt = cnt + 1
-
+            #
             #     self.state = 3
             #     rospy.sleep(1)
+            # if self.state == 3:
+            #    try:
+            #        rospy.loginfo("%s: Lowering robot head", self.node_name)
+            #        move_head_srv = rospy.ServiceProxy(self.mv_head_srv_nm, MoveHead)
+            #        move_head_req = move_head_srv("down")
+            #
+            #        if move_head_req.success == True:
+            #            self.state = 4
+            #            rospy.loginfo("%s: Move head down succeded!", self.node_name)
+            #        else:
+            #            rospy.loginfo("%s: Move head down failed!", self.node_name)
+            #            self.state = 5
+            #
+            #        rospy.sleep(3)
+            #
+            #    except rospy.ServiceException, e:
+            #        print "Service call to move_head server failed: %s"%e
+            # Error handling
+            if self.state == 5:
+                rospy.logerr("%s: State machine failed. Check your code and try again!", self.node_name)
+                return
+
+        rospy.loginfo("%s: State machine finished!", self.node_name)
+        return
 
 
 # import py_trees as pt, py_trees_ros as ptr
@@ -353,7 +329,7 @@ class StateMachine(object):
 # 		# already tucked the arm
 # 		if self.finished: 
 # 			return pt.common.Status.SUCCESS
-		
+
 # 		# command to tuck arm if haven't already
 # 		elif not self.sent_goal:
 
@@ -374,7 +350,6 @@ class StateMachine(object):
 # 		# if I'm still trying :|
 # 		else:
 # 			return pt.common.Status.RUNNING
-		
 
 
 # class LowerHead(pt.behaviour.Behaviour):
@@ -409,15 +384,12 @@ class StateMachine(object):
 # 		else: return pt.common.Status.SUCCESS if self.move_head_req.success else pt.common.Status.FAILURE
 
 
-	
-
 if __name__ == "__main__":
+    rospy.init_node('main_state_machine')
+    try:
+        # StateMachine()
+        StateMachine()
+    except rospy.ROSInterruptException:
+        pass
 
-	rospy.init_node('main_state_machine')
-	try:
-		#StateMachine()
-		StateMachine()
-	except rospy.ROSInterruptException:
-		pass
-
-	rospy.spin()
+    rospy.spin()
