@@ -45,7 +45,7 @@ class StateMachine(object):
         self.dtct_top = rospy.get_param(rospy.get_name() + '/aruco_pose_topic')
 
         # Subscribe to topicspick_srv
-
+        self.dtct_sub = rospy.Subscriber(self.dtct_top, PoseStamped, self.aruco_pose_cb)
         # Wait for service providers
         rospy.wait_for_service(self.mv_head_srv_nm, timeout=30)
         rospy.wait_for_service(self.pick_cube_srv_nm, timeout=30)
@@ -53,6 +53,7 @@ class StateMachine(object):
 
         # Instantiate publishers
         self.cmd_vel_pub = rospy.Publisher(self.cmd_vel_top, Twist, queue_size=10)
+        
 
         # Set up action clients
         rospy.loginfo("%s: Waiting for play_motion action server...", self.node_name)
@@ -63,7 +64,7 @@ class StateMachine(object):
             rospy.logerr("%s: Could not connect to /play_motion action server", self.node_name)
             exit()
         rospy.loginfo("%s: Connected to play_motion action server", self.node_name)
-        self.pick_cube_pub = rospy.Subscriber(self.dtct_top, PoseStamped, self.aruco_pose_cb)
+        #self.pick_cube_pub = rospy.Subscriber(self.dtct_top, PoseStamped, self.aruco_pose_cb)
         # Init state machine
         self.state = 0
         rospy.sleep(3)
@@ -72,6 +73,8 @@ class StateMachine(object):
     def check_states(self):
 
         while not rospy.is_shutdown() and self.state != 6:
+            
+            # State 0: Tuck Arm
             if self.state == 0:
                 rospy.loginfo("%s: Tucking the arm...", self.node_name)
                 goal = PlayMotionGoal()
@@ -82,13 +85,33 @@ class StateMachine(object):
 
                 if success_tucking:
                     rospy.loginfo("%s: Arm tuck: ", self.play_motion_ac.get_result())
-                    self.state = 1
+                    self.state = 9
                 else:
                     self.play_motion_ac.cancel_goal()
                     rospy.logerr("%s: play_motion failed to tuck arm, reset simulation", self.node_name)
                     self.state = 5
 
                 rospy.sleep(1)
+
+            # State 9: Low head
+            if self.state == 9:
+                try:
+                    rospy.loginfo("%s: Lowering robot head", self.node_name)
+                    move_head_srv = rospy.ServiceProxy(self.mv_head_srv_nm, MoveHead)
+                    move_head_req = move_head_srv("down")
+            
+                    if move_head_req.success == True:
+                        self.state = 1
+                        rospy.loginfo("%s: Move head down succeded!", self.node_name)
+                    else:
+                        rospy.loginfo("%s: Move head down failed!", self.node_name)
+                        self.state = 5
+            
+                    rospy.sleep(3)
+            
+                except rospy.ServiceException, e:
+                    print "Service call to move_head server failed: %s"%e
+
             if self.state == 1:
                 #self.pick_cube_pub.publish(self.cube_pose_stamped)
                 try:
