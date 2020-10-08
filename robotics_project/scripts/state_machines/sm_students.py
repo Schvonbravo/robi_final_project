@@ -80,7 +80,7 @@ class StateMachine(object):
 
         while not rospy.is_shutdown() and self.state != 666:
             
-            # State 0: Tuck Arm
+            # State 0: Execute tuck Arm task
             if self.state == 0:
                 rospy.loginfo("%s: Tucking the arm...", self.node_name)
                 goal = PlayMotionGoal()
@@ -99,20 +99,20 @@ class StateMachine(object):
 
                 rospy.sleep(1)
 
-            # State 1: Low head
+            # State 1: Execute Low head task
             if self.state == 1:
                 try:
-                    rospy.loginfo("%s: Lowering robot head...", self.node_name)
+                    rospy.loginfo("%s: Lowering head...", self.node_name)
                     move_head_srv = rospy.ServiceProxy(self.mv_head_srv_nm, MoveHead)
                     move_head_req = move_head_srv("down")
             
                     if move_head_req.success == True:
-                        rospy.loginfo("%s: Move head down succeded!", self.node_name)
+                        rospy.loginfo("%s: Low head down succeded!", self.node_name)
                         previous_state = 1
                         self.state = 7
                         
                     else:
-                        rospy.loginfo("%s: Move head down failed!", self.node_name)
+                        rospy.loginfo("%s: Low head down failed!", self.node_name)
                         previous_state = 1
                         self.state = 10
             
@@ -121,7 +121,7 @@ class StateMachine(object):
                 except rospy.ServiceException, e:
                     print "Service call to move_head server failed: %s"%e
 
-            # State 2: Execute picking task
+            # State 2: Execute pick task
             if self.state == 2:
                 try:
                     rospy.loginfo("%s: Executing pick task...", self.node_name)
@@ -133,7 +133,7 @@ class StateMachine(object):
                         self.state = 7
                         #rospy.loginfo("%s: Pick Cube succeded!", self.node_name)
                     else:
-                        rospy.loginfo("%s: Pick Cube failed!", self.node_name)
+                        rospy.loginfo("%s: Pick cube failed!", self.node_name)
                         previous_state = 2
                         self.state = 10
 
@@ -142,7 +142,7 @@ class StateMachine(object):
                 except rospy.ServiceException, e:
                     print "Service call to pick server failed: %s" % e
             
-            # State 3: Turn around
+            # State 3: Execute turn around task
             if self.state == 3:
                 move_msg = Twist()
                 move_msg.angular.z = -1
@@ -151,7 +151,7 @@ class StateMachine(object):
                 converged = False
                 cnt = 0
                 rospy.loginfo("%s: Turning around", self.node_name)
-                while not rospy.is_shutdown() and cnt < 30:
+                while not rospy.is_shutdown() and cnt < 25:
                     self.cmd_vel_pub.publish(move_msg)
                     rate.sleep()
                     cnt = cnt + 1
@@ -159,7 +159,7 @@ class StateMachine(object):
                 self.state = 4
                 rospy.sleep(1)
 
-            # State 4: Move towards the table
+            # State 4: Execute move to table B
             if self.state == 4:
                 move_msg = Twist()
                 move_msg.linear.x = 1
@@ -168,7 +168,7 @@ class StateMachine(object):
                 rate = rospy.Rate(10)
                 converged = False
                 cnt = 0
-                rospy.loginfo("%s: Moving towards table", self.node_name)
+                rospy.loginfo("%s: Moving towards table B", self.node_name)
                 while not rospy.is_shutdown() and cnt < 10:
                     self.cmd_vel_pub.publish(move_msg)
                     rate.sleep()
@@ -177,10 +177,10 @@ class StateMachine(object):
                 self.state = 5
                 rospy.sleep(1)
             
-            #State 5: Execute placing task
+            #State 5: Execute place task
             if self.state == 5:
                 try:
-                    rospy.loginfo("%s: Placing down cube...", self.node_name)
+                    rospy.loginfo("%s: Execute placing task...", self.node_name)
                     place_cube_srv = rospy.ServiceProxy(self.place_cube_srv_nm, SetBool)
                     place_cube_req = place_cube_srv(True)
 
@@ -191,7 +191,7 @@ class StateMachine(object):
                     else:
                         rospy.loginfo("%s: Place Cube failed!", self.node_name)
                         previous_state = 5
-                        self.state = 13
+                        self.state = 13 # to new Turn around
 
                     rospy.sleep(3)
 
@@ -199,7 +199,7 @@ class StateMachine(object):
                     print "Service call to place server failed: %s" % e
 
 
-            # State 7: Detect the cube
+            # State 7: Decision machine
             if self.state == 7:
 
                 if previous_state == 1: # Low head
@@ -218,25 +218,24 @@ class StateMachine(object):
 
                     previous_state = 7
                     rospy.loginfo("%s: Cube is in sight!!!", self.node_name)
-                    self.state = 2 # Pick up
+                    self.state = 2 # to Pick up task
                     rospy.sleep(1)
 
-                if previous_state == 2: # pick up
+                if previous_state == 2: # from pick up task
                     if self.left_gripper > 0.02 and self.right_gripper > 0.02:
                         rospy.loginfo("%s: Pick up succeded!", self.node_name)
                         move_head_srv = rospy.ServiceProxy(self.mv_head_srv_nm, MoveHead)
                         move_head_req = move_head_srv("up") # Up head
-                        #clear_costmap_srv = rospy.ServiceProxy(self.clrcstmp_srv, Empty)
-                        #clear_costamp_req = clear_costmap_srv()
+                        # ----------------------------------
                         previous_state = 7
-                        self.state = 3 # Turn around
+                        self.state = 3 # to turn around task
                     else:
-                        rospy.loginfo("%s: ATTENTION: CUBE DROPPED!", self.node_name)
+                        rospy.loginfo("%s: ATTENTION: CUBE DROPPED!????", self.node_name)
                         previous_state = 7
-                        self.state = 3
+                        self.state = 3 # hard code to turn around
 
-                if previous_state == 5:
-                    try:
+                if previous_state == 5: # from place task
+                    try: 
                         rospy.loginfo("%s: Detecting the placed cube...", self.node_name)
                         move_head_srv = rospy.ServiceProxy(self.mv_head_srv_nm, MoveHead)
                         move_head_req = move_head_srv("down")
@@ -248,20 +247,20 @@ class StateMachine(object):
                             rospy.sleep(1.0)
 
                         if cnt < 5 :
-                            rospy.loginfo("%s: CUBE DETECTED!", self.node_name)
+                            rospy.loginfo("%s: Cube detected!", self.node_name)
                             previous_state = 7
                             self.state = 666 #succeed
                         else :
                             rospy.loginfo("%s: Cannot find the cube...", self.node_name)
                             previous_state = 7
-                            self.state = 13 # new turn around
+                            self.state = 13 # to new turn around
 
                         rospy.sleep(3)
 
                     except rospy.ServiceException, e:
                         print "Service call to pick_up server failed: %s"%e
 
-            # State 13: new Turn around
+            # State 13: new Turn around task
             if self.state == 13:
                 move_msg = Twist()
                 move_msg.angular.z = -1
@@ -270,7 +269,7 @@ class StateMachine(object):
                 converged = False
                 cnt = 0
                 rospy.loginfo("%s: Turning around", self.node_name)
-                while not rospy.is_shutdown() and cnt < 60:
+                while not rospy.is_shutdown() and cnt < 30:
                     self.cmd_vel_pub.publish(move_msg)
                     rate.sleep()
                     cnt = cnt + 1
@@ -287,13 +286,15 @@ class StateMachine(object):
                 rate = rospy.Rate(10)
                 converged = False
                 cnt = 0
-                rospy.loginfo("%s: Moving towards table", self.node_name)
+                rospy.loginfo("%s: Moving back towards table A", self.node_name)
                 while not rospy.is_shutdown() and cnt < 10:
                     self.cmd_vel_pub.publish(move_msg)
                     rate.sleep()
                     cnt = cnt + 1
 
-                self.state = 1 # Low head
+                #self.state = 1 # Low head
+                self.state = 10 # Low head
+                rospy.loginfo("%s: Back to init position", self.node_name)
                 rospy.sleep(1)
 
             # Error handling

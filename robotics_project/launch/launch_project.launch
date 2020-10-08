@@ -50,12 +50,12 @@
     </node> -->
 
     <!-- Project RGBD point cloud to laser-scan -->
-    <include file="$(find tiago_laser_sensors)/launch/rgbd_depth_laser.launch">
+    <!-- <include file="$(find tiago_laser_sensors)/launch/rgbd_depth_laser.launch">
       <arg name="image"     value="xtion/depth_registered/image_raw"/>
       <arg name="scan"      value="rgbd_scan"/>
       <arg name="multiple"  value="$(arg multiple)"/>
       <arg name="tf_prefix" value="$(arg tf_prefix)"/>
-    </include>
+    </include> -->
 
     <!-- AMCL Localization -->
     <!-- <include file="$(find tiago_2dnav)/launch/localization_$(arg localization).launch">
