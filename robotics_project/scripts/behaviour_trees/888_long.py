@@ -4,11 +4,13 @@
 
 
 import py_trees as pt, py_trees_ros as ptr, rospy
-from geometry_msgs.msg import Twist, Pose, PoseStamped
+from geometry_msgs.msg import Twist
+from geometry_msgs.msg import PoseStamped, Pose
 from actionlib import SimpleActionClient
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
 from robotics_project.srv import MoveHead, MoveHeadRequest, MoveHeadResponse
 from std_srvs.srv import Empty, SetBool, SetBoolResponse
+
 
 
 class counter(pt.behaviour.Behaviour):
@@ -48,9 +50,9 @@ class go(pt.behaviour.Behaviour):
         rospy.loginfo("Initialising go behaviour.")
 
         # action space
-        # self.cmd_vel_top = rospy.get_param(rospy.get_name() + '/cmd_vel_topic')
+        #self.cmd_vel_top = rospy.get_param(rospy.get_name() + '/cmd_vel_topic')
         self.cmd_vel_top = "/key_vel"
-        # rospy.loginfo(self.cmd_vel_top)
+        #rospy.loginfo(self.cmd_vel_top)
         self.cmd_vel_pub = rospy.Publisher(self.cmd_vel_top, Twist, queue_size=10)
 
         # command
@@ -73,7 +75,7 @@ class go(pt.behaviour.Behaviour):
 
 
 class tuckarm(pt.behaviour.Behaviour):
-    
+
     """
     Sends a goal to the tuck arm action server.
     Returns running whilst awaiting the result,
@@ -102,9 +104,9 @@ class tuckarm(pt.behaviour.Behaviour):
     def update(self):
 
         # already tucked the arm
-        if self.finished:
+        if self.finished: 
             return pt.common.Status.SUCCESS
-
+        
         # command to tuck arm if haven't already
         elif not self.sent_goal:
 
@@ -130,140 +132,8 @@ class tuckarm(pt.behaviour.Behaviour):
         else:
             return pt.common.Status.RUNNING
 
-
-class pickUpCube(pt.behaviour.Behaviour):
-    def __init__(self):
-        rospy.loginfo("Initialising pick up cube behaviour.")
-        # server
-        rospy.loginfo("%s: Picking cube up...")
-        pick_cube_srv_nm = rospy.get_param(rospy.get_name() + '/pick_srv')
-        self.pick_cube_srv = rospy.ServiceProxy(pick_cube_srv_nm, SetBool)
-        rospy.wait_for_service(pick_cube_srv_nm, timeout=30)
-
-        # execution checker
-        self.tried = False
-        self.done = False
-
-        super(pickUpCube, self).__init__("Pick up cube!")
-
-    def update(self):
-        # success if done
-        if self.done:
-            return pt.common.Status.SUCCESS
-        # try if not tried
-        elif not self.tried:
-
-            # Pick up cube
-            rospy.loginfo("%s: Picking up cube...")
-            self.pick_cube_req = self.pick_cube_srv(True)
-            self.tried = True
-
-            # tell the tree you're running
-            return pt.common.Status.RUNNING
-
-        # if succesful
-        elif self.pick_cube_req.success:
-            self.done = True
-            return pt.common.Status.SUCCESS
-
-        # if failed
-        elif not self.pick_cube_req.success:
-            return pt.common.Status.FAILURE
-
-        # if still trying
-        else:
-            return pt.common.Status.RUNNING
-
-class placeDownCube2(pt.behaviour.Behaviour): # placeDownCube2
-
-    def __init__(self):
-        rospy.loginfo("Initialising place down cube behaviour.")
-        # server
-        rospy.loginfo("%s: Placing cube down...")
-        place_cube_srv_nm = rospy.get_param(rospy.get_name() + '/place_srv')
-        self.place_cube_Srv = rospy.ServiceProxy(place_cube_srv_nm, SetBool)
-        rospy.wait_for_service(place_cube_srv_nm, timeout=30)
-
-        # execution checker
-        self.tried = False
-        self.done = False
-
-        super(placeDownCube, self).__init__("Place down cube!")
-
-    def update(self):
-        # success if done
-        if self.done:
-            return pt.common.Status.SUCCESS
-        # try if not tried
-        elif not self.tried:
-
-            # Pick up cube
-            rospy.loginfo("%s: Placing cube down...")
-            self.pick_cube_req = self.place_cube_Srv(True)
-            self.tried = True
-
-            # tell the tree you're running
-            return pt.common.Status.RUNNING
-
-        # if succesful
-        elif self.pick_cube_req.success:
-            self.done = True
-            return pt.common.Status.SUCCESS
-
-        # if failed
-        elif not self.pick_cube_req.success:
-            return pt.common.Status.FAILURE #TiaoshingggggggggggggggggGGGGGG
-
-        # if still trying
-        else:
-            return pt.common.Status.RUNNING
-
-
-class placeDownCube(pt.behaviour.Behaviour):
-    def __init__(self):
-        rospy.loginfo("Initialising place down cube behaviour.")
-        # server
-        rospy.loginfo("%s: Placing cube down...")
-        place_cube_srv_nm = rospy.get_param(rospy.get_name() + '/place_srv')
-        self.place_cube_Srv = rospy.ServiceProxy(place_cube_srv_nm, SetBool)
-        rospy.wait_for_service(place_cube_srv_nm, timeout=30)
-
-        # execution checker
-        self.tried = False
-        self.done = False
-
-        super(placeDownCube, self).__init__("Place down cube!")
-
-    def update(self):
-        # success if done
-        if self.done:
-            return pt.common.Status.SUCCESS
-        # try if not tried
-        elif not self.tried:
-
-            # Pick up cube
-            rospy.loginfo("%s: Placing cube down...")
-            self.pick_cube_req = self.place_cube_Srv(True)
-            self.tried = True
-
-            # tell the tree you're running
-            return pt.common.Status.RUNNING
-
-        # if succesful
-        elif self.pick_cube_req.success:
-            self.done = True
-            return pt.common.Status.SUCCESS
-
-        # if failed
-        elif not self.pick_cube_req.success:
-            return pt.common.Status.FAILURE #TiaoshingggggggggggggggggGGGGGG
-
-        # if still trying
-        else:
-            return pt.common.Status.RUNNING
-
-
 class movehead(pt.behaviour.Behaviour):
+
     """
     Lowers or raisesthe head of the robot.
     Returns running whilst awaiting the result,
@@ -318,6 +188,91 @@ class movehead(pt.behaviour.Behaviour):
         else:
             return pt.common.Status.RUNNING
 
+class Pick(pt.behaviour.Behaviour):
+
+    """
+    Lowers or raisesthe head of the robot.
+    Returns running whilst awaiting the result,
+    success if the action was succesful, and v.v..
+    """
+
+    def __init__(self):
+        rospy.loginfo("Initialising pick behaviour.")
+        self.pick_srv_nm = rospy.get_param(rospy.get_name() + '/pick_srv')
+        self.pick_srv = rospy.ServiceProxy(self.pick_srv_nm, SetBool)
+        rospy.wait_for_service(self.pick_srv_nm, timeout=30)
+        
+        self.tried = False
+        self.done = False
+
+        super(Pick, self).__init__("Pick!")
+
+    def update(self):
+        
+    # success if done
+        if self.done:
+            return pt.common.Status.SUCCESS
+
+        # try if not tried
+        elif not self.tried:
+
+            # command
+            self.pick_req = self.pick_srv()
+            self.tried = True
+
+            # tell the tree you're running
+            return pt.common.Status.RUNNING
+
+        # if succesful
+        elif self.pick_req.success:
+            self.done = True
+            return pt.common.Status.SUCCESS
+
+        # if failed
+        elif not self.pick_req.success:
+            return pt.common.Status.FAILURE
+
+        # if still trying
+        else:
+            return pt.common.Status.RUNNING
+        
+class Place(pt.behaviour.Behaviour):
+    def __init__(self):
+        self.place_srv_nm = rospy.get_param(rospy.get_name() + '/place_srv')
+        self.place_srv = rospy.ServiceProxy(self.place_srv_nm, SetBool)
+        rospy.wait_for_service(self.place_srv_nm, timeout=30)
+        
+        self.tried = False
+        self.done = False
+
+        super(Place, self).__init__("Place!")
+    def update(self):
+
+        if self.done:
+            return pt.common.Status.SUCCESS
+
+            # try if not tried
+        elif not self.tried:
+
+            # command
+            self.place_req = self.place_srv()
+            self.tried = True
+
+            # tell the tree you're running
+            return pt.common.Status.RUNNING
+
+        # if succesful
+        elif self.place_req.success:
+            self.done = True
+            return pt.common.Status.SUCCESS
+
+        # if failed
+        elif not self.place_req.success:
+            return pt.common.Status.FAILURE
+
+        # if still trying
+        else:
+            return pt.common.Status.RUNNING
 
 class Check(pt.behaviour.Behaviour):
     def __init__(self):
@@ -325,7 +280,7 @@ class Check(pt.behaviour.Behaviour):
         # self.cube_PoseStamped_new.header.seq = 10
         rospy.sleep(5)
         # self.Seq = 10
-        self.cube_poseq = rospy.get_param(rospy.get_name() + '/cube_pose')
+        self.cube_poseq = rospy.get_param(rospy.get_name() + '/cube_poseq')
         self.aruco_pose_subs = rospy.Subscriber(self.cube_poseq, PoseStamped, self.aruco_set_pose)
         
         if (self.cube_PoseStamped_new.pose.position.x > 0.45 and self.cube_PoseStamped_new.pose.position.x < 0.65):

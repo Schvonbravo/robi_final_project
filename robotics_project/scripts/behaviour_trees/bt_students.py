@@ -10,10 +10,13 @@ class BehaviourTree(ptr.trees.BehaviourTree):
     def __init__(self):
         rospy.loginfo("Initialising behaviour tree")
 
-        # go to Turn around
+        tuckarm1 = tuckarm()
+        tuckarm2 = tuckarm()
+
+        # go to Turn around 
         turnAround = pt.composites.Selector(
             name="Go turn around fallback",
-            children=[counter(29, "At turn around?"), go("Go to around!", 0, -1)]
+            children=[counter(28, "At turn around?"), go("Go to around!", 0, -1)]
         )
 
         turnAround2 = pt.composites.Selector(
@@ -24,13 +27,13 @@ class BehaviourTree(ptr.trees.BehaviourTree):
         # go to Table B
         gotoTableB = pt.composites.Selector(
             name="Go to table B fallback",
-            children=[counter(10, "At Table B?"), go("Go to Table B!", 1, 0)]
+            children=[counter(9, "At Table B?"), go("Go to Table B!", 1, 0)]
         )
 
         # go to Table A
         gotoTableA = pt.composites.Selector(
             name="Go to table A fallback",
-            children=[counter(7, "At Table A?"), go("Go to Table A!", 1, 0)]
+            children=[counter(9, "At Table A?"), go("Go to Table A!", 1, 0)]
         )
 
         # back 3 steps
@@ -44,7 +47,7 @@ class BehaviourTree(ptr.trees.BehaviourTree):
 
         # become the tree
         tree = RSequence(name="Main sequence",
-                         children=[tuckarm(), headDown, pickUpCube(), turnAround, gotoTableB, placeDownCube() tuckarm(), back3step, turnAround2, gotoTableA])
+                         children=[tuckarm1, headDown, pickUpCube(), turnAround, gotoTableB, placeDownCube(), tuckarm2, turnAround2, gotoTableA])
         super(BehaviourTree, self).__init__(tree)
 
         # execute the behaviour tree
