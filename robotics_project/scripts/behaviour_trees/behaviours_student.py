@@ -128,6 +128,7 @@ class pickUpCube(pt.behaviour.Behaviour):
     def __init__(self):
         rospy.loginfo("Initialising pick up cube behaviour.")
         # server
+        rospy.loginfo("%s: Picking cube up...")
         pick_cube_srv_nm = rospy.get_param(rospy.get_name() + '/pick_srv')
         self.pick_cube_srv = rospy.ServiceProxy(pick_cube_srv_nm, SetBool)
         rospy.wait_for_service(pick_cube_srv_nm, timeout=30)
@@ -161,6 +162,50 @@ class pickUpCube(pt.behaviour.Behaviour):
         # if failed
         elif not self.pick_cube_req.success:
             return pt.common.Status.FAILURE
+
+        # if still trying
+        else:
+            return pt.common.Status.RUNNING
+
+class placeDownCube2(pt.behaviour.Behaviour): # placeDownCube2
+
+    def __init__(self):
+        rospy.loginfo("Initialising place down cube behaviour.")
+        # server
+        rospy.loginfo("%s: Placing cube down...")
+        place_cube_srv_nm = rospy.get_param(rospy.get_name() + '/place_srv')
+        self.place_cube_Srv = rospy.ServiceProxy(place_cube_srv_nm, SetBool)
+        rospy.wait_for_service(place_cube_srv_nm, timeout=30)
+
+        # execution checker
+        self.tried = False
+        self.done = False
+
+        super(placeDownCube, self).__init__("Place down cube!")
+
+    def update(self):
+        # success if done
+        if self.done:
+            return pt.common.Status.SUCCESS
+        # try if not tried
+        elif not self.tried:
+
+            # Pick up cube
+            rospy.loginfo("%s: Placing cube down...")
+            self.pick_cube_req = self.place_cube_Srv(True)
+            self.tried = True
+
+            # tell the tree you're running
+            return pt.common.Status.RUNNING
+
+        # if succesful
+        elif self.pick_cube_req.success:
+            self.done = True
+            return pt.common.Status.SUCCESS
+
+        # if failed
+        elif not self.pick_cube_req.success:
+            return pt.common.Status.FAILURE #TiaoshingggggggggggggggggGGGGGG
 
         # if still trying
         else:
