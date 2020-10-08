@@ -169,7 +169,7 @@ class StateMachine(object):
                 converged = False
                 cnt = 0
                 rospy.loginfo("%s: Moving towards table B", self.node_name)
-                while not rospy.is_shutdown() and cnt < 10:
+                while not rospy.is_shutdown() and cnt < 10: #10 
                     self.cmd_vel_pub.publish(move_msg)
                     rate.sleep()
                     cnt = cnt + 1

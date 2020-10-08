@@ -78,8 +78,8 @@
     <node pkg="robotics_project" type="sm_students.py" name="logic_state_machine" output="screen">
       <param name="global_loc_srv" value=""/>
       <param name="clear_costmaps_srv"  value=""/>
-      <param name="pick_srv"            value="/$(arg namespace_project)/pick_cube_gui"/>
-      <param name="place_srv"           value="/$(arg namespace_project)/place_cube_gui"/>
+      <param name="pick_srv"            value="/$(arg namespace_project)/pick_srv_holder"/>
+      <param name="place_srv"           value="/$(arg namespace_project)/place_srv_holder"/>
       <param name="nav_goal_topic"      value=""/>
       <param name="cmd_vel_topic"       value="/key_vel"/>
       <param name="move_base_frame"     value=""/>
@@ -105,8 +105,8 @@
     <!-- Node exposing service to trigger the pick and place -->
     <node pkg="robotics_project" name="manipulation_client" type="manipulation_client.py" output="screen">  
       <param name="marker_pose_topic"   value="/$(arg namespace_project)/marker_pose_gui"/>
-      <param name="pick_srv"            value="/$(arg namespace_project)/pick_cube_gui"/>
-      <param name="place_srv"           value="/$(arg namespace_project)/place_cube_gui"/>
+      <param name="pick_srv"            value="/$(arg namespace_project)/pick_srv_holder"/>
+      <param name="place_srv"           value="/$(arg namespace_project)/place_srv_holder"/>
       <param name="move_head_srv"       value="/$(arg namespace_project)/move_head_gui"/>
       <param name="pickup_marker_pose"  value="/pickup_marker_pose_holder"/>
       <param name="place_marker_pose"   value="/place_marker_pose_holder"/>
