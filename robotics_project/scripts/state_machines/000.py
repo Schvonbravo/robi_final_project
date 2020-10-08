@@ -306,7 +306,6 @@ class StateMachine(object):
                         print "Service call to pick_up server failed: %s"%e
 
             # Error handling
-
             if self.state == 404:
                 rospy.logerr("%s: State machine failed. Check your code and try again!", self.node_name)
                 return

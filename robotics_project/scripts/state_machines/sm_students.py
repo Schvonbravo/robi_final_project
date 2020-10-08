@@ -5,8 +5,6 @@ from numpy import linalg as LA
 
 import rospy
 from geometry_msgs.msg import Twist
-#from robotics_project.msg import PickUpPoseAction
-#from std_msgs.msg import Header
 from std_srvs.srv import Empty, SetBool, SetBoolRequest
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Point, Quaternion
 from robotics_project.srv import MoveHead, MoveHeadRequest, MoveHeadResponse
@@ -66,8 +64,8 @@ class StateMachine(object):
         # Set up action clients
         rospy.loginfo("%s: Waiting for play_motion action server...", self.node_name)
         self.play_motion_ac = SimpleActionClient("/play_motion", PlayMotionAction)
-        # self.pi
-        # Could be called /robotics_intro/pick_srv
+
+
         if not self.play_motion_ac.wait_for_server(rospy.Duration(1000)):
             rospy.logerr("%s: Could not connect to /play_motion action server", self.node_name)
             exit()
@@ -126,7 +124,7 @@ class StateMachine(object):
             # State 2: Execute picking task
             if self.state == 2:
                 try:
-                    rospy.loginfo("%s: Picking up cube...", self.node_name)
+                    rospy.loginfo("%s: Executing pick task...", self.node_name)
                     pick_cube_srv = rospy.ServiceProxy(self.pick_cube_srv_nm, SetBool)
                     pick_cube_req = pick_cube_srv(True)
 
@@ -153,7 +151,7 @@ class StateMachine(object):
                 converged = False
                 cnt = 0
                 rospy.loginfo("%s: Turning around", self.node_name)
-                while not rospy.is_shutdown() and cnt < 31:
+                while not rospy.is_shutdown() and cnt < 30:
                     self.cmd_vel_pub.publish(move_msg)
                     rate.sleep()
                     cnt = cnt + 1
@@ -193,7 +191,7 @@ class StateMachine(object):
                     else:
                         rospy.loginfo("%s: Place Cube failed!", self.node_name)
                         previous_state = 5
-                        self.state = 10
+                        self.state = 13
 
                     rospy.sleep(3)
 
@@ -219,6 +217,7 @@ class StateMachine(object):
                         rate.sleep()
 
                     previous_state = 7
+                    rospy.loginfo("%s: Cube is in sight!!!", self.node_name)
                     self.state = 2 # Pick up
                     rospy.sleep(1)
 
@@ -234,7 +233,7 @@ class StateMachine(object):
                     else:
                         rospy.loginfo("%s: ATTENTION: CUBE DROPPED!", self.node_name)
                         previous_state = 7
-                        self.state = 10
+                        self.state = 3
 
                 if previous_state == 5:
                     try:
@@ -251,16 +250,51 @@ class StateMachine(object):
                         if cnt < 5 :
                             rospy.loginfo("%s: CUBE DETECTED!", self.node_name)
                             previous_state = 7
-                            self.state = 666
+                            self.state = 666 #succeed
                         else :
                             rospy.loginfo("%s: Cannot find the cube...", self.node_name)
                             previous_state = 7
-                            self.state = 10
+                            self.state = 13 # new turn around
 
                         rospy.sleep(3)
 
                     except rospy.ServiceException, e:
                         print "Service call to pick_up server failed: %s"%e
+
+            # State 13: new Turn around
+            if self.state == 13:
+                move_msg = Twist()
+                move_msg.angular.z = -1
+
+                rate = rospy.Rate(10)
+                converged = False
+                cnt = 0
+                rospy.loginfo("%s: Turning around", self.node_name)
+                while not rospy.is_shutdown() and cnt < 60:
+                    self.cmd_vel_pub.publish(move_msg)
+                    rate.sleep()
+                    cnt = cnt + 1
+
+                self.state = 14
+                rospy.sleep(1)
+
+            # State 14: new Move towards the table
+            if self.state == 14:
+                move_msg = Twist()
+                move_msg.linear.x = 1
+                move_msg.angular.z = 0
+
+                rate = rospy.Rate(10)
+                converged = False
+                cnt = 0
+                rospy.loginfo("%s: Moving towards table", self.node_name)
+                while not rospy.is_shutdown() and cnt < 10:
+                    self.cmd_vel_pub.publish(move_msg)
+                    rate.sleep()
+                    cnt = cnt + 1
+
+                self.state = 1 # Low head
+                rospy.sleep(1)
 
             # Error handling
             if self.state == 10:
