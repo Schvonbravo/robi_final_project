@@ -188,12 +188,12 @@ class placeDownCube2(pt.behaviour.Behaviour): # placeDownCube2
         self.tried = False
         self.done = False
 
-        super(placeDownCube, self).__init__("Place down cube!")
+        super(placeDownCube2, self).__init__("Place down cube!")
 
     def update(self):
         # success if done
         if self.done:
-            return pt.common.Status.SUCCESS
+            return pt.common.Status.FAILURE
         # try if not tried
         elif not self.tried:
 
@@ -208,11 +208,11 @@ class placeDownCube2(pt.behaviour.Behaviour): # placeDownCube2
         # if succesful
         elif self.pick_cube_req.success:
             self.done = True
-            return pt.common.Status.SUCCESS
+            return pt.common.Status.FAILURE
 
         # if failed
         elif not self.pick_cube_req.success:
-            return pt.common.Status.FAILURE #TiaoshingggggggggggggggggGGGGGG
+            return pt.common.Status.SUCCESS #TiaoshingggggggggggggggggGGGGGG
 
         # if still trying
         else:
@@ -325,8 +325,8 @@ class Check(pt.behaviour.Behaviour):
         # self.cube_PoseStamped_new.header.seq = 10
         rospy.sleep(5)
         # self.Seq = 10
-        self.cube_poseq = rospy.get_param(rospy.get_name() + '/cube_pose')
-        self.aruco_pose_subs = rospy.Subscriber(self.cube_poseq, PoseStamped, self.aruco_set_pose)
+        self.cube_pose = rospy.get_param(rospy.get_name() + '/cube_pose')
+        self.aruco_pose_subs = rospy.Subscriber(self.cube_pose, PoseStamped, self.aruco_set_pose)
         
         if (self.cube_PoseStamped_new.pose.position.x > 0.45 and self.cube_PoseStamped_new.pose.position.x < 0.65):
             print("Check completed: cube detected!!")
