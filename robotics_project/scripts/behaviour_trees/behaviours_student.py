@@ -2,14 +2,23 @@
 # sprague@kth.se
 # Behaviours needed for the example student solution.
 
+import numpy as np
+from numpy import linalg as LA
 
+import rospy
 import py_trees as pt, py_trees_ros as ptr, rospy
 from geometry_msgs.msg import Twist, Pose, PoseStamped
 from actionlib import SimpleActionClient
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
 from robotics_project.srv import MoveHead, MoveHeadRequest, MoveHeadResponse
 from std_srvs.srv import Empty, SetBool, SetBoolResponse
+#from robotics_project/scripts/state_machinesm_students.py import StateMachine as sm 
 
+from actionlib import SimpleActionClient
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from nav_msgs.msg import Odometry
+
+from moveit_msgs.msg import MoveItErrorCodes
 
 class counter(pt.behaviour.Behaviour):
 
@@ -130,6 +139,67 @@ class tuckarm(pt.behaviour.Behaviour):
         else:
             return pt.common.Status.RUNNING
 
+class P_checker(pt.behaviour.Behaviour):
+
+    def aruco_pose_cb(self, aruco_pose_msg):
+        self.aruco_pose = aruco_pose_msg
+        self.aruco_pose_rcv = True
+    def gripper_cb(self, joint_state_msg):
+        self.left_gripper = joint_state_msg.position[7]
+        self.right_gripper = joint_state_msg.position[8]
+
+    def __init__(self):
+
+        self.node_name = "Student P_checker"
+
+        #self.aruco_pose = None
+        self.aruco_pose_rcv = False
+        self.aruco_pose = PoseStamped()
+        #self.left_gripper = None
+        #self.right_gripper = None
+
+        # Access rosparams
+        
+        rospy.loginfo("Initialising P_checker behaviour.")
+        # server
+        rospy.loginfo("%s: P_checking...")
+
+        self.dtct_top = rospy.get_param(rospy.get_name() + '/aruco_pose_topic')
+        #pick_cube_srv_nm = rospy.get_param(rospy.get_name() + '/pick_srv')
+        self.dtct_sub = rospy.Subscriber(self.dtct_top, PoseStamped, self.aruco_pose_cb)
+        #self.pick_cube_srv = rospy.ServiceProxy(pick_cube_srv_nm, SetBool)
+
+        #self.mv_head_srv_nm = rospy.get_param(rospy.get_name() + '/move_head_srv')
+
+        # ---
+        #rospy.wait_for_service(self.mv_head_srv_nm, timeout=30)
+        #rospy.wait_for_service(pick_cube_srv_nm, timeout=30)
+
+        # execution checker
+        #self.tried = False
+        #self.done = False
+
+        super(P_checker, self).__init__("P_checker!")
+
+    def update(self):
+
+        # if yes
+        if self.aruco_pose_rcv:
+            pose_msg_x = self.aruco_pose.pose.position.x
+            rospy.sleep(0.1)
+            if pose_msg_x != self.aruco_pose.pose.position.x:
+                rospy.loginfo("Already placed")
+                return pt.common.Status.FAILURE
+            else:
+                rospy.loginfo("Cube not detected COED 1")
+                return pt.common.Status.SUCCESS
+
+        # IF NO
+        else:
+            rospy.loginfo("Cube not detected CODE 2")
+            return pt.common.Status.SUCCESS
+
+
 
 class pickUpCube(pt.behaviour.Behaviour):
     def __init__(self):
@@ -174,49 +244,6 @@ class pickUpCube(pt.behaviour.Behaviour):
         else:
             return pt.common.Status.RUNNING
 
-class placeDownCube2(pt.behaviour.Behaviour): # placeDownCube2
-
-    def __init__(self):
-        rospy.loginfo("Initialising place down cube behaviour.")
-        # server
-        rospy.loginfo("%s: Placing cube down...")
-        place_cube_srv_nm = rospy.get_param(rospy.get_name() + '/place_srv')
-        self.place_cube_Srv = rospy.ServiceProxy(place_cube_srv_nm, SetBool)
-        rospy.wait_for_service(place_cube_srv_nm, timeout=30)
-
-        # execution checker
-        self.tried = False
-        self.done = False
-
-        super(placeDownCube2, self).__init__("Place down cube!")
-
-    def update(self):
-        # success if done
-        if self.done:
-            return pt.common.Status.FAILURE
-        # try if not tried
-        elif not self.tried:
-
-            # Pick up cube
-            rospy.loginfo("%s: Placing cube down...")
-            self.pick_cube_req = self.place_cube_Srv(True)
-            self.tried = True
-
-            # tell the tree you're running
-            return pt.common.Status.RUNNING
-
-        # if succesful
-        elif self.pick_cube_req.success:
-            self.done = True
-            return pt.common.Status.FAILURE
-
-        # if failed
-        elif not self.pick_cube_req.success:
-            return pt.common.Status.SUCCESS #TiaoshingggggggggggggggggGGGGGG
-
-        # if still trying
-        else:
-            return pt.common.Status.RUNNING
 
 
 class placeDownCube(pt.behaviour.Behaviour):
