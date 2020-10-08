@@ -204,7 +204,7 @@ class placeDownCube(pt.behaviour.Behaviour):
 
         # if failed
         elif not self.pick_cube_req.success:
-            return pt.common.Status.FAILURE
+            return pt.common.Status.FAILURE #TiaoshingggggggggggggggggGGGGGG
 
         # if still trying
         else:
