@@ -12,11 +12,13 @@ from std_srvs.srv import SetBool
 
 
 class counter(pt.behaviour.Behaviour):
+
     """
     Returns running for n ticks and success thereafter.
     """
 
     def __init__(self, n, name):
+
         rospy.loginfo("Initialising counter behaviour.")
 
         # counter
@@ -27,6 +29,7 @@ class counter(pt.behaviour.Behaviour):
         super(counter, self).__init__(name)
 
     def update(self):
+
         # increment i
         self.i += 1
 
@@ -35,16 +38,18 @@ class counter(pt.behaviour.Behaviour):
 
 
 class go(pt.behaviour.Behaviour):
+
     """
     Returns running and commands a velocity indefinitely.
     """
 
     def __init__(self, name, linear, angular):
+
         rospy.loginfo("Initialising go behaviour.")
 
         # action space
-        # self.cmd_vel_top = rospy.get_param(rospy.get_name() + '/cmd_vel_topic')
-        self.cmd_vel_top = "/key_vel"
+        self.cmd_vel_top = rospy.get_param(rospy.get_name() + '/cmd_vel_topic')
+        # self.cmd_vel_top = "/key_vel"
         # rospy.loginfo(self.cmd_vel_top)
         self.cmd_vel_pub = rospy.Publisher(self.cmd_vel_top, Twist, queue_size=10)
 
@@ -57,6 +62,7 @@ class go(pt.behaviour.Behaviour):
         super(go, self).__init__(name)
 
     def update(self):
+
         # send the message
         rate = rospy.Rate(10)
         self.cmd_vel_pub.publish(self.move_msg)
@@ -65,8 +71,8 @@ class go(pt.behaviour.Behaviour):
         # tell the tree that you're running
         return pt.common.Status.RUNNING
 
-
 class tuckarm(pt.behaviour.Behaviour):
+
     """
     Sends a goal to the tuck arm action server.
     Returns running whilst awaiting the result,
@@ -123,10 +129,38 @@ class tuckarm(pt.behaviour.Behaviour):
         else:
             return pt.common.Status.RUNNING
 
+class movehead(pt.behaviour.Behaviour):
+    
+    """
+    Lowers or raisesthe head of the robot.
+    Returns running whilst awaiting the result,
+    success if the action was succesful, and v.v..
+    """
+
+    def __init__(self, direction):
+
+        rospy.loginfo("Initialising move head behaviour.")
+
+        # server
+        mv_head_srv_nm = rospy.get_param(rospy.get_name() + '/move_head_srv')
+        self.move_head_srv = rospy.ServiceProxy(mv_head_srv_nm, MoveHead)
+        rospy.wait_for_service(mv_head_srv_nm, timeout=30)
+
+        # head movement direction; "down" or "up"
+        self.direction = direction
+
+        # execution checker
+        self.tried = False
+        self.done = False
+
+        # become a behaviour
+        super(movehead, self).__init__("Lower head!")
 
 class pickUpCube(pt.behaviour.Behaviour):
+
     def __init__(self):
         rospy.loginfo("Initialising pick up cube behaviour.")
+
         # server
         pick_cube_srv_nm = rospy.get_param(rospy.get_name() + '/pick_srv')
         self.pick_cube_srv = rospy.ServiceProxy(pick_cube_srv_nm, SetBool)
@@ -191,6 +225,7 @@ class placeDownCube(pt.behaviour.Behaviour):
 
             # Pick up cube
             rospy.loginfo("%s: Placing cube down...")
+            rospy.sleep(1)
             self.pick_cube_req = self.place_cube_Srv(True)
             self.tried = True
 
@@ -211,31 +246,7 @@ class placeDownCube(pt.behaviour.Behaviour):
             return pt.common.Status.RUNNING
 
 
-class movehead(pt.behaviour.Behaviour):
-    """
-    Lowers or raisesthe head of the robot.
-    Returns running whilst awaiting the result,
-    success if the action was succesful, and v.v..
-    """
 
-    def __init__(self, direction):
-
-        rospy.loginfo("Initialising move head behaviour.")
-
-        # server
-        mv_head_srv_nm = rospy.get_param(rospy.get_name() + '/move_head_srv')
-        self.move_head_srv = rospy.ServiceProxy(mv_head_srv_nm, MoveHead)
-        rospy.wait_for_service(mv_head_srv_nm, timeout=30)
-
-        # head movement direction; "down" or "up"
-        self.direction = direction
-
-        # execution checker
-        self.tried = False
-        self.done = False
-
-        # become a behaviour
-        super(movehead, self).__init__("Lower head!")
 
     def update(self):
 
@@ -248,6 +259,7 @@ class movehead(pt.behaviour.Behaviour):
 
             # command
             self.move_head_req = self.move_head_srv(self.direction)
+            rospy.sleep(1)
             self.tried = True
 
             # tell the tree you're running
