@@ -80,6 +80,61 @@ class go(pt.behaviour.Behaviour):
         # tell the tree that you're running
         return pt.common.Status.RUNNING
 
+class movehead(pt.behaviour.Behaviour):
+    """
+    Lowers or raisesthe head of the robot.
+    Returns running whilst awaiting the result,
+    success if the action was succesful, and v.v..
+    """
+
+    def __init__(self, direction):
+
+        rospy.loginfo("Initialising move head behaviour.")
+
+        # server
+        mv_head_srv_nm = rospy.get_param(rospy.get_name() + '/move_head_srv')
+        self.move_head_srv = rospy.ServiceProxy(mv_head_srv_nm, MoveHead)
+        rospy.wait_for_service(mv_head_srv_nm, timeout=30)
+
+        # head movement direction; "down" or "up"
+        self.direction = direction
+
+        # execution checker
+        self.tried = False
+        self.done = False
+
+        # become a behaviour
+        super(movehead, self).__init__("Lower head!")
+
+    def update(self):
+
+        # success if done
+        if self.done:
+            return pt.common.Status.SUCCESS
+
+        # try if not tried
+        elif not self.tried:
+
+            # command
+            self.move_head_req = self.move_head_srv(self.direction)
+            self.tried = True
+
+            # tell the tree you're running
+            return pt.common.Status.RUNNING
+
+        # if succesful
+        elif self.move_head_req.success:
+            self.done = True
+            return pt.common.Status.SUCCESS
+
+        # if failed
+        elif not self.move_head_req.success:
+            return pt.common.Status.FAILURE
+
+        # if still trying
+        else:
+            return pt.common.Status.RUNNING
+
 
 class tuckarm(pt.behaviour.Behaviour):
     
@@ -248,6 +303,9 @@ class pickUpCube(pt.behaviour.Behaviour):
 
 class placeDownCube(pt.behaviour.Behaviour):
     def __init__(self):
+
+        #rospy.sleep(5)
+
         rospy.loginfo("Initialising place down cube behaviour.")
         # server
         rospy.loginfo("%s: Placing cube down...")
@@ -270,19 +328,19 @@ class placeDownCube(pt.behaviour.Behaviour):
 
             # Pick up cube
             rospy.loginfo("%s: Placing cube down...")
-            self.pick_cube_req = self.place_cube_Srv(True)
+            self.place_cube_req = self.place_cube_Srv(True)
             self.tried = True
 
             # tell the tree you're running
             return pt.common.Status.RUNNING
 
         # if succesful
-        elif self.pick_cube_req.success:
+        elif self.place_cube_req.success:
             self.done = True
             return pt.common.Status.SUCCESS #
 
         # if failed
-        elif not self.pick_cube_req.success:
+        elif not self.place_cube_req.success:
             return pt.common.Status.SUCCESS #TiaoshingggggggggggggggggGGGGGG
 
         # if still trying
@@ -290,108 +348,5 @@ class placeDownCube(pt.behaviour.Behaviour):
             return pt.common.Status.RUNNING
 
 
-class movehead(pt.behaviour.Behaviour):
-    """
-    Lowers or raisesthe head of the robot.
-    Returns running whilst awaiting the result,
-    success if the action was succesful, and v.v..
-    """
-
-    def __init__(self, direction):
-
-        rospy.loginfo("Initialising move head behaviour.")
-
-        # server
-        mv_head_srv_nm = rospy.get_param(rospy.get_name() + '/move_head_srv')
-        self.move_head_srv = rospy.ServiceProxy(mv_head_srv_nm, MoveHead)
-        rospy.wait_for_service(mv_head_srv_nm, timeout=30)
-
-        # head movement direction; "down" or "up"
-        self.direction = direction
-
-        # execution checker
-        self.tried = False
-        self.done = False
-
-        # become a behaviour
-        super(movehead, self).__init__("Lower head!")
-
-    def update(self):
-
-        # success if done
-        if self.done:
-            return pt.common.Status.SUCCESS
-
-        # try if not tried
-        elif not self.tried:
-
-            # command
-            self.move_head_req = self.move_head_srv(self.direction)
-            self.tried = True
-
-            # tell the tree you're running
-            return pt.common.Status.RUNNING
-
-        # if succesful
-        elif self.move_head_req.success:
-            self.done = True
-            return pt.common.Status.SUCCESS
-
-        # if failed
-        elif not self.move_head_req.success:
-            return pt.common.Status.FAILURE
-
-        # if still trying
-        else:
-            return pt.common.Status.RUNNING
 
 
-class Check(pt.behaviour.Behaviour):
-    def __init__(self):
-        self.cube_PoseStamped_new = PoseStamped()
-        # self.cube_PoseStamped_new.header.seq = 10
-        rospy.sleep(5)
-        # self.Seq = 10
-        self.cube_pose = rospy.get_param(rospy.get_name() + '/cube_pose')
-        self.aruco_pose_subs = rospy.Subscriber(self.cube_pose, PoseStamped, self.aruco_set_pose)
-        
-        if (self.cube_PoseStamped_new.pose.position.x > 0.45 and self.cube_PoseStamped_new.pose.position.x < 0.65):
-            print("Check completed: cube detected!!")
-            self.flag = 0
-            print(self.flag)
-        else:
-            print("Check completed: didn't detect the cube, go back to Table1")
-            self.flag = 1
-            print(self.flag)
-        
-        # if self.Seq == 10:
-        #     print("Check completed: didn't detect the cube, go back to Table1")
-        #     self.flag = 0
-        #     print(self.flag)
-        # else:
-        #     print("Check completed: cube detected!!")
-        #     self.flag = 1
-        #     print(self.flag)
-        
-        super(Check, self).__init__("Check!")
-
-    def aruco_set_pose(self, aruco_pose_msg):
-        self.cube_PoseStamped_new = aruco_pose_msg
-
-    def update(self):
-        if (self.flag == 0):
-            return pt.common.Status.FAILURE
-        if (self.flag == 1):
-            return pt.common.Status.SUCCESS
-
-class CheckDebug(pt.behaviour.Behaviour):
-    def __init__(self):
-        super(CheckDebug, self).__init__("CheckDebug!")
-    def update(self):
-        return pt.common.Status.FAILURE
-
-class CheckDebugSUCCESS(pt.behaviour.Behaviour):
-    def __init__(self):
-        super(CheckDebugSUCCESS, self).__init__("CheckDebug!")
-    def update(self):
-        return pt.common.Status.SUCCESS
