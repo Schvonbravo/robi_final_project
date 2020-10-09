@@ -188,15 +188,15 @@ class P_checker(pt.behaviour.Behaviour):
             pose_msg_x = self.aruco_pose.pose.position.x
             rospy.sleep(0.1)
             if pose_msg_x != self.aruco_pose.pose.position.x:
-                rospy.loginfo("Already placed")
+                rospy.loginfo("Cube detected, congrats!!!")
                 return pt.common.Status.FAILURE
             else:
-                rospy.loginfo("Cube not detected COED 1, cube is not at the desired position")
+                rospy.loginfo("Cube not detected CODE 1, cube is not at the desired position")
                 return pt.common.Status.SUCCESS
 
         # IF NO
         else:
-            rospy.loginfo("Cube not detected CODE 2")
+            rospy.loginfo("Cube not detected CODE 2, CANNOT receive aruco_pose_rcv")
             return pt.common.Status.SUCCESS
 
 
