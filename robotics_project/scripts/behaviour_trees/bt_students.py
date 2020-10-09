@@ -14,12 +14,13 @@ class BehaviourTree(ptr.trees.BehaviourTree):
         tuckarm2 = tuckarm()
 
 
-        # go to Turn around 
+        # go to Turn around 1
         turnAround = pt.composites.Selector(
             name="Go turn around fallback",
-            children=[counter(28, "At turn around?"), go("Go to around!", 0, -1)]
+            children=[counter(28, "At turn around1?"), go("Go to around1!", 0, -1)]
         )
-
+        
+        # go to Turn around 2
         turnAround2 = pt.composites.Selector(
             name="Go turn around fallback",
             children=[counter(15, "At turn around2?"), go("Go to around2!", 0, -1)]
