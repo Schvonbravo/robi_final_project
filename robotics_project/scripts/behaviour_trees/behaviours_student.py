@@ -148,6 +148,8 @@ class tuckarm(pt.behaviour.Behaviour):
     def __init__(self):
 
         rospy.loginfo("Initialising tuck arm behaviour.")
+        # servser
+        rospy.loginfo("%s: Executing tuck arm task...")
 
         # Set up action client
         self.play_motion_ac = SimpleActionClient("/play_motion", PlayMotionAction)
@@ -200,9 +202,10 @@ class P_checker(pt.behaviour.Behaviour):
     def aruco_pose_cb(self, aruco_pose_msg):
         self.aruco_pose = aruco_pose_msg
         self.aruco_pose_rcv = True
-    def gripper_cb(self, joint_state_msg):
-        self.left_gripper = joint_state_msg.position[7]
-        self.right_gripper = joint_state_msg.position[8]
+
+    #def gripper_cb(self, joint_state_msg):
+        #self.left_gripper = joint_state_msg.position[7]
+        #self.right_gripper = joint_state_msg.position[8]
 
     def __init__(self):
 
@@ -259,9 +262,9 @@ class P_checker(pt.behaviour.Behaviour):
 
 class pickCube(pt.behaviour.Behaviour):
     def __init__(self):
-        rospy.loginfo("Initialising pick up cube behaviour.")
+        rospy.loginfo("Initialising pick task behaviour.")
         # server
-        rospy.loginfo("%s: Picking cube up...")
+        rospy.loginfo("%s: Executing pick task...")
         pk_srv_nm = rospy.get_param(rospy.get_name() + '/pick_srv')
         self.pk_srv = rospy.ServiceProxy(pk_srv_nm, SetBool)
         rospy.wait_for_service(pk_srv_nm, timeout=30)
@@ -307,9 +310,9 @@ class placeCube(pt.behaviour.Behaviour):
 
         #rospy.sleep(5)
 
-        rospy.loginfo("Initialising place down cube behaviour.")
+        rospy.loginfo("Initialising place task behaviour.")
         # server
-        rospy.loginfo("%s: Placing cube down...")
+        rospy.loginfo("%s: Executing place task...")
         plc_srv_nm = rospy.get_param(rospy.get_name() + '/place_srv')
         self.plc_srv = rospy.ServiceProxy(plc_srv_nm, SetBool)
         rospy.wait_for_service(plc_srv_nm, timeout=30)
