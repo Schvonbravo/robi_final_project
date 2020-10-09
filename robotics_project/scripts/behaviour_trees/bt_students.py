@@ -48,7 +48,7 @@ class BehaviourTree(ptr.trees.BehaviourTree):
 
         # become the tree
         tree = RSequence(name="Main sequence",
-                         children=[tuckarm1, headDown, pickUpCube(), turnAround, gotoTableB, placeDownCube(), P_checker(), back3step, tuckarm2, turnAround2, gotoTableA])
+                         children=[tuckarm1, headDown, pickCube(), turnAround, gotoTableB, placeCube(), P_checker(), back3step, tuckarm2, turnAround2, gotoTableA])
         super(BehaviourTree, self).__init__(tree)
 
         # execute the behaviour tree

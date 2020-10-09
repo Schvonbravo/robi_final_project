@@ -81,6 +81,7 @@ class go(pt.behaviour.Behaviour):
         return pt.common.Status.RUNNING
 
 class movehead(pt.behaviour.Behaviour):
+
     """
     Lowers or raisesthe head of the robot.
     Returns running whilst awaiting the result,
@@ -220,15 +221,15 @@ class P_checker(pt.behaviour.Behaviour):
         rospy.loginfo("%s: P_checking...")
 
         self.dtct_top = rospy.get_param(rospy.get_name() + '/aruco_pose_topic')
-        #pick_cube_srv_nm = rospy.get_param(rospy.get_name() + '/pick_srv')
+        #pk_srv_nm = rospy.get_param(rospy.get_name() + '/pick_srv')
         self.dtct_sub = rospy.Subscriber(self.dtct_top, PoseStamped, self.aruco_pose_cb)
-        #self.pick_cube_srv = rospy.ServiceProxy(pick_cube_srv_nm, SetBool)
+        #self.pick_cube_srv = rospy.ServiceProxy(pk_srv_nm, SetBool)
 
         #self.mv_head_srv_nm = rospy.get_param(rospy.get_name() + '/move_head_srv')
 
         # ---
         #rospy.wait_for_service(self.mv_head_srv_nm, timeout=30)
-        #rospy.wait_for_service(pick_cube_srv_nm, timeout=30)
+        #rospy.wait_for_service(pk_srv_nm, timeout=30)
 
         # execution checker
         #self.tried = False
@@ -256,20 +257,20 @@ class P_checker(pt.behaviour.Behaviour):
 
 
 
-class pickUpCube(pt.behaviour.Behaviour):
+class pickCube(pt.behaviour.Behaviour):
     def __init__(self):
         rospy.loginfo("Initialising pick up cube behaviour.")
         # server
         rospy.loginfo("%s: Picking cube up...")
-        pick_cube_srv_nm = rospy.get_param(rospy.get_name() + '/pick_srv')
-        self.pick_cube_srv = rospy.ServiceProxy(pick_cube_srv_nm, SetBool)
-        rospy.wait_for_service(pick_cube_srv_nm, timeout=30)
+        pk_srv_nm = rospy.get_param(rospy.get_name() + '/pick_srv')
+        self.pk_srv = rospy.ServiceProxy(pk_srv_nm, SetBool)
+        rospy.wait_for_service(pk_srv_nm, timeout=30)
 
         # execution checker
         self.tried = False
         self.done = False
 
-        super(pickUpCube, self).__init__("Pick up cube!")
+        super(pickCube, self).__init__("Pick up cube!")
 
     def update(self):
         # success if done
@@ -280,19 +281,19 @@ class pickUpCube(pt.behaviour.Behaviour):
 
             # Pick up cube
             rospy.loginfo("%s: Picking up cube...")
-            self.pick_cube_req = self.pick_cube_srv(True)
+            self.pk_req = self.pk_srv(True)
             self.tried = True
 
             # tell the tree you're running
             return pt.common.Status.RUNNING
 
         # if succesful
-        elif self.pick_cube_req.success:
+        elif self.pk_req.success:
             self.done = True
             return pt.common.Status.SUCCESS
 
         # if failed
-        elif not self.pick_cube_req.success:
+        elif not self.pk_req.success:
             return pt.common.Status.FAILURE
 
         # if still trying
@@ -301,7 +302,7 @@ class pickUpCube(pt.behaviour.Behaviour):
 
 
 
-class placeDownCube(pt.behaviour.Behaviour):
+class placeCube(pt.behaviour.Behaviour):
     def __init__(self):
 
         #rospy.sleep(5)
@@ -309,15 +310,15 @@ class placeDownCube(pt.behaviour.Behaviour):
         rospy.loginfo("Initialising place down cube behaviour.")
         # server
         rospy.loginfo("%s: Placing cube down...")
-        place_cube_srv_nm = rospy.get_param(rospy.get_name() + '/place_srv')
-        self.place_cube_Srv = rospy.ServiceProxy(place_cube_srv_nm, SetBool)
-        rospy.wait_for_service(place_cube_srv_nm, timeout=30)
+        plc_srv_nm = rospy.get_param(rospy.get_name() + '/place_srv')
+        self.plc_srv = rospy.ServiceProxy(plc_srv_nm, SetBool)
+        rospy.wait_for_service(plc_srv_nm, timeout=30)
 
         # execution checker
         self.tried = False
         self.done = False
 
-        super(placeDownCube, self).__init__("Place down cube!")
+        super(placeCube, self).__init__("Place down cube!")
 
     def update(self):
         # success if done
@@ -328,19 +329,19 @@ class placeDownCube(pt.behaviour.Behaviour):
 
             # Pick up cube
             rospy.loginfo("%s: Placing cube down...")
-            self.place_cube_req = self.place_cube_Srv(True)
+            self.plc_req = self.plc_srv(True)
             self.tried = True
 
             # tell the tree you're running
             return pt.common.Status.RUNNING
 
         # if succesful
-        elif self.place_cube_req.success:
+        elif self.plc_req.success:
             self.done = True
             return pt.common.Status.SUCCESS #
 
         # if failed
-        elif not self.place_cube_req.success:
+        elif not self.plc_req.success:
             return pt.common.Status.SUCCESS #TiaoshingggggggggggggggggGGGGGG
 
         # if still trying
