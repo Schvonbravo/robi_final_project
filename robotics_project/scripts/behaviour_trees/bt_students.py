@@ -40,7 +40,7 @@ class BehaviourTree(ptr.trees.BehaviourTree):
         # back 3 steps
         back3step = pt.composites.Selector(
             name="Go to table B fallback",
-            children=[counter(9, "At back 5 step?"), go("Go to back 5 step!", -1, 0)]
+            children=[counter(9, "At back 5 step?"), go("Cube not detected CODE 3, cube is not at the desired position", -1, 0)]
         )
 
         # lower head
