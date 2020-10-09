@@ -191,7 +191,7 @@ class P_checker(pt.behaviour.Behaviour):
                 rospy.loginfo("Already placed")
                 return pt.common.Status.FAILURE
             else:
-                rospy.loginfo("Cube not detected COED 1")
+                rospy.loginfo("Cube not detected COED 1, cube is not at the desired position")
                 return pt.common.Status.SUCCESS
 
         # IF NO
@@ -264,7 +264,7 @@ class placeDownCube(pt.behaviour.Behaviour):
     def update(self):
         # success if done
         if self.done:
-            return pt.common.Status.SUCCESS
+            return pt.common.Status.SUCCESS #
         # try if not tried
         elif not self.tried:
 
@@ -279,11 +279,11 @@ class placeDownCube(pt.behaviour.Behaviour):
         # if succesful
         elif self.pick_cube_req.success:
             self.done = True
-            return pt.common.Status.SUCCESS
+            return pt.common.Status.SUCCESS #
 
         # if failed
         elif not self.pick_cube_req.success:
-            return pt.common.Status.FAILURE #TiaoshingggggggggggggggggGGGGGG
+            return pt.common.Status.SUCCESS #TiaoshingggggggggggggggggGGGGGG
 
         # if still trying
         else:

@@ -21,7 +21,7 @@ class BehaviourTree(ptr.trees.BehaviourTree):
 
         turnAround2 = pt.composites.Selector(
             name="Go turn around fallback",
-            children=[counter(29, "At turn around2?"), go("Go to around2!", 0, -1)]
+            children=[counter(15, "At turn around2?"), go("Go to around2!", 0, -1)]
         )
 
         # go to Table B
@@ -33,13 +33,13 @@ class BehaviourTree(ptr.trees.BehaviourTree):
         # go to Table A
         gotoTableA = pt.composites.Selector(
             name="Go to table A fallback",
-            children=[counter(9, "At Table A?"), go("Go to Table A!", 1, 0)]
+            children=[counter(5, "At Table A?"), go("Go to Table A!", 1, 0)]
         )
 
         # back 3 steps
         back3step = pt.composites.Selector(
             name="Go to table B fallback",
-            children=[counter(5, "At back 5 step?"), go("Go to back 5 step!", -1, 0)]
+            children=[counter(4, "At back 5 step?"), go("Go to back 5 step!", -1, 0)]
         )
 
         # lower head
@@ -47,7 +47,7 @@ class BehaviourTree(ptr.trees.BehaviourTree):
 
         # become the tree
         tree = RSequence(name="Main sequence",
-                         children=[tuckarm1, headDown, pickUpCube(), turnAround, gotoTableB, placeDownCube(), P_checker(), tuckarm2, turnAround2, gotoTableA])
+                         children=[tuckarm1, headDown, pickUpCube(), turnAround, gotoTableB, placeDownCube(), P_checker(), back3step, tuckarm2, turnAround2, gotoTableA])
         super(BehaviourTree, self).__init__(tree)
 
         # execute the behaviour tree
